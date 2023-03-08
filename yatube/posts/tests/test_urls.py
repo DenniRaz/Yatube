@@ -1,127 +1,114 @@
-from http import HTTPStatus
-
 from django.test import Client, TestCase
 from django.urls import reverse
 
 from posts.models import Group, Post, User
 
+USERNAME = 'NoName'
+ANOTHER_USERNAME = 'NoName2'
+GROUP_SLUG = 'test-slug'
+LOGIN_URL = reverse('users:login')
+INDEX_URL = reverse('posts:index')
+CREATE_URL = reverse('posts:post_create')
+FOLLOW_INDEX_URL = reverse('posts:follow_index')
+FOLLOW_INDEX_URL_REDIRECT = f'{LOGIN_URL}?next={FOLLOW_INDEX_URL}'
+CREATE_URL_REDIRECT = f'{LOGIN_URL}?next={CREATE_URL}'
+UNEXISTING_URL = '/unexisting_page/'
+GROUP_URL = reverse('posts:group_list', args=[GROUP_SLUG])
+PROFILE_URL = reverse('posts:profile', args=[USERNAME])
+PROFILE_FOLLOW_URL = reverse('posts:profile_follow', args=[USERNAME])
+PROFILE_FOLLOW_REDIRECT = f'{LOGIN_URL}?next={PROFILE_FOLLOW_URL}'
+PROFILE_UNFOLLOW_URL = reverse('posts:profile_unfollow', args=[USERNAME])
+PROFILE_UNFOLLOW_REDIRECT = f'{LOGIN_URL}?next={PROFILE_UNFOLLOW_URL}'
 
-class PostURLTests(TestCase):
+
+class PostURLTest(TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.user_not_author = User.objects.create(username='NotAuthor')
-        cls.user_author = User.objects.create(username='Author')
-        cls.group = Group.objects.create(slug='test-slug')
-        cls.post = Post.objects.create(author=cls.user_author)
+        cls.guest = Client()
+        cls.user = User.objects.create_user(username=USERNAME)
+        cls.author = Client()
+        cls.author.force_login(cls.user)
+        cls.group = Group.objects.create(
+            title='Тестовый заголовок',
+            description='Тестовый текст',
+            slug=GROUP_SLUG,
+        )
+        cls.post = Post.objects.create(
+            author=cls.user,
+            text='Тестовый пост',
+            group=cls.group,
+        )
+        cls.POST_URL = reverse('posts:posts_detail', args=[cls.post.id])
+        cls.EDIT_POST_URL = reverse('posts:posts_edit', args=[cls.post.id])
+        cls.EDIT_POST_URL_REDIRECT = f'{LOGIN_URL}?next={cls.EDIT_POST_URL}'
+        cls.ADD_COMMENT_URL = reverse('posts:add_comment', args=[cls.post.id])
+        cls.ADD_COMMENT_URL_REDIRECT = \
+            f'{LOGIN_URL}?next={cls.ADD_COMMENT_URL}'
+        cls.another = Client()
+        cls.another_user = User.objects.create_user(username=ANOTHER_USERNAME)
+        cls.another.force_login(cls.another_user)
 
-    def setUp(self):
-        self.guest_client = Client()
-        self.authorized_client = Client()
-        self.authorized_client.force_login(PostURLTests.user_not_author)
-        self.author = Client()
-        self.author.force_login(PostURLTests.user_author)
-
-    def test_url_exists_at_desired_location_anonymous(self):
-        """Страницы
-        /,
-        /group/<slug:slug>/,
-        /profile/<str:username>/,
-        /posts/<int:post_id>/
-        доступны любому пользователю.
-        """
-        list_of_url = [
-            reverse('posts:index'),
-            reverse(
-                'posts:group_list',
-                kwargs={'slug': PostURLTests.group.slug}
-            ),
-            reverse(
-                'posts:profile',
-                kwargs={'username': PostURLTests.user_author.username}
-            ),
-            reverse(
-                'posts:posts_detail',
-                kwargs={'post_id': PostURLTests.post.pk}
-            ),
+    def test_list_url_status(self):
+        """Страницы приложения posts
+        соотвествуют ожидаемому status_code."""
+        cases = [
+            (INDEX_URL, self.guest, 200),
+            (UNEXISTING_URL, self.guest, 404),
+            (CREATE_URL, self.author, 200),
+            (CREATE_URL, self.guest, 302),
+            (GROUP_URL, self.guest, 200),
+            (PROFILE_URL, self.guest, 200),
+            (self.POST_URL, self.guest, 200),
+            (self.EDIT_POST_URL, self.author, 200),
+            (self.EDIT_POST_URL, self.guest, 302),
+            (self.EDIT_POST_URL, self.another, 302),
+            (FOLLOW_INDEX_URL, self.guest, 302),
+            (FOLLOW_INDEX_URL, self.author, 200),
+            (self.ADD_COMMENT_URL, self.author, 302),
+            (self.ADD_COMMENT_URL, self.guest, 302),
+            (PROFILE_FOLLOW_URL, self.author, 302),
+            (PROFILE_FOLLOW_URL, self.guest, 302),
+            (PROFILE_FOLLOW_URL, self.another, 302),
+            (PROFILE_UNFOLLOW_URL, self.another, 302),
+            (PROFILE_UNFOLLOW_URL, self.author, 404),
+            (PROFILE_UNFOLLOW_URL, self.guest, 302),
         ]
-        for url in list_of_url:
-            with self.subTest(url=url):
-                response = self.guest_client.get(url)
-                self.assertEqual(response.status_code, HTTPStatus.OK)
+        for url, client, status in cases:
+            with self.subTest(url=url, client=client, status=status):
+                self.assertEqual(client.get(url).status_code, status)
 
-    def test_post_create_url_exists_at_desired_location_authorized_user(self):
-        """Страница /create/ доступна любому авторизованному пользователю."""
-        response = self.authorized_client.get(reverse('posts:post_create'))
-        self.assertEqual(response.status_code, HTTPStatus.OK)
+    def test_url_redirect(self):
+        """Проверка редиректов"""
+        url_redirect = [
+            (self.EDIT_POST_URL, self.another, self.POST_URL),
+            (self.EDIT_POST_URL, self.guest, self.EDIT_POST_URL_REDIRECT),
+            (CREATE_URL, self.guest, CREATE_URL_REDIRECT),
+            (FOLLOW_INDEX_URL, self.guest, FOLLOW_INDEX_URL_REDIRECT),
+            (self.ADD_COMMENT_URL, self.author, self.POST_URL),
+            (self.ADD_COMMENT_URL, self.guest, self.ADD_COMMENT_URL_REDIRECT),
+            (PROFILE_FOLLOW_URL, self.author, PROFILE_URL),
+            (PROFILE_FOLLOW_URL, self.guest, PROFILE_FOLLOW_REDIRECT),
+            (PROFILE_FOLLOW_URL, self.another, PROFILE_URL),
+            (PROFILE_UNFOLLOW_URL, self.guest, PROFILE_UNFOLLOW_REDIRECT),
+            (PROFILE_UNFOLLOW_URL, self.another, PROFILE_URL),
+        ]
+        for url, client, redirect in url_redirect:
+            with self.subTest(url=url, client=client, redirect=redirect):
+                self.assertRedirects(client.get(url, follow=True), redirect)
 
-    def test_posts_edit_url_exists_at_desired_location_author(self):
-        """Страница /posts/<int:post_id>/edit/ доступна автору."""
-        response = self.author.get(
-            reverse(
-                'posts:posts_edit',
-                kwargs={'post_id': PostURLTests.post.pk}
-            )
-        )
-        self.assertEqual(response.status_code, HTTPStatus.OK)
-
-    def test_non_existent_url_returns_404_error(self):
-        """Несуществующая cтраница /unexisting_page/ возвращает ошибку 404."""
-        response = self.guest_client.get('/unexisting_page/')
-        self.assertEqual(response.status_code, HTTPStatus.NOT_FOUND)
-
-    def test_post_create_url_redirect_anonymous_on_admin_login(self):
-        """Страница по адресу /create/ перенаправит анонимного
-        пользователя на страницу логина.
-        """
-        response = self.guest_client.get(
-            reverse('posts:post_create'), follow=True
-        )
-        self.assertRedirects(response, '/auth/login/?next=/create/')
-
-    def test_posts_edit_url_redirect_not_author_on_posts_detail(self):
-        """Страница по адресу /posts/<int:post_id>/edit/
-        перенаправит любого пользователя, кроме автора,
-        на страницу деталей поста.
-        """
-        response = self.authorized_client.get(
-            reverse(
-                'posts:posts_edit',
-                kwargs={'post_id': PostURLTests.post.pk}
-            ),
-            follow=True
-        )
-        self.assertRedirects(response, f'/posts/{PostURLTests.post.pk}/')
-
-    def test_urls_uses_correct_template(self):
-        """URL-адрес использует соответствующий шаблон."""
-        templates_url_names = {
-            reverse('posts:index'): 'posts/index.html',
-            reverse(
-                'posts:group_list',
-                kwargs={'slug': PostURLTests.group.slug}
-            ): 'posts/group_list.html',
-            reverse(
-                'posts:profile',
-                kwargs={'username': PostURLTests.user_author.username}
-            ): 'posts/profile.html',
-            reverse(
-                'posts:posts_detail',
-                kwargs={'post_id': PostURLTests.post.pk}
-            ): 'posts/post_detail.html',
-            reverse('posts:post_create'): 'posts/create_post.html',
-            reverse(
-                'posts:posts_edit',
-                kwargs={'post_id': PostURLTests.post.pk}
-            ): 'posts/create_post.html',
+    def test_urls_use_correct_template(self):
+        """URL-адреса приложения posts используют соответствующий шаблон."""
+        templates_url_dict = {
+            INDEX_URL: 'posts/index.html',
+            GROUP_URL: 'posts/group_list.html',
+            PROFILE_URL: 'posts/profile.html',
+            self.POST_URL: 'posts/post_detail.html',
+            CREATE_URL: 'posts/create_post.html',
+            self.EDIT_POST_URL: 'posts/create_post.html',
+            UNEXISTING_URL: 'core/404.html',
+            FOLLOW_INDEX_URL: 'posts/follow.html',
         }
-
-        for address, template in templates_url_names.items():
-            with self.subTest(address=address):
-                response = self.author.get(address)
-                self.assertTemplateUsed(response, template)
-
-    def test_404_uses_correct_template(self):
-        """Cтраница 404 отдаёт кастомный шаблон."""
-        response = self.author.get('/unexisting_page/')
-        self.assertTemplateUsed(response, 'core/404.html')
+        for url, template in templates_url_dict.items():
+            with self.subTest(url=url, template=template):
+                self.assertTemplateUsed(self.author.get(url), template)
