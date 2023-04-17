@@ -7,7 +7,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
-from posts.models import Comment, Group, Post, User
+from ..models import Comment, Group, Post, User
 
 USERNAME = 'NoName'
 ANOTHER_USERNAME = 'NoName2'
@@ -56,7 +56,7 @@ class PostViewsTest(TestCase):
             author=cls.user,
             text='Тестовый пост',
             group=cls.group,
-            image=uploaded
+            image=uploaded,
         )
         cls.POST_URL = reverse('posts:posts_detail', args=[cls.post.pk])
         cls.EDIT_POST_URL = reverse('posts:posts_edit', args=[cls.post.pk])
@@ -101,7 +101,7 @@ class PostViewsTest(TestCase):
         self.assertRedirects(response, PROFILE_URL)
         self.assertEqual(
             post.image,
-            IMAGE_FOLDER + str(form_data['image'])
+            IMAGE_FOLDER + str(form_data['image']),
         )
 
     def test_guest_client_not_create_post(self):

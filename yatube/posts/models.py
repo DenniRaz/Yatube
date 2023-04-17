@@ -9,7 +9,9 @@ POST_STR = 'Автор {author} написал в группе {group} пост:
 
 
 class Group(models.Model):
+    """Модель создание групп для постов."""
     title = models.CharField(
+        unique=True,
         max_length=200,
         verbose_name='Название группы',
     )
@@ -32,6 +34,7 @@ class Group(models.Model):
 
 
 class Post(models.Model):
+    """Модель создание постов."""
     group = models.ForeignKey(
         Group,
         on_delete=models.SET_NULL,
@@ -71,11 +74,12 @@ class Post(models.Model):
         return POST_STR.format(
             author=self.author.username,
             group=self.group,
-            text=self.text
+            text=self.text,
         )
 
 
 class Comment(models.Model):
+    """Модель для написания комментариев к постам."""
     post = models.ForeignKey(
         Post,
         on_delete=models.CASCADE,
@@ -105,11 +109,12 @@ class Comment(models.Model):
     def __str__(self):
         return COMMENT_STR.format(
             author=self.author.username,
-            text=self.text
+            text=self.text,
         )
 
 
 class Follow(models.Model):
+    """Модель подписок на авторов."""
     user = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
@@ -136,5 +141,5 @@ class Follow(models.Model):
     def __str__(self):
         return FOLLOW_STR.format(
             user=self.user.username,
-            author=self.author.username
+            author=self.author.username,
         )

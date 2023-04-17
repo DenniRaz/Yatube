@@ -2,9 +2,9 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
 
-from posts.forms import CommentForm, PostForm
-from posts.models import Follow, Group, Post
-from posts.utils import pagination
+from .forms import CommentForm, PostForm
+from .models import Follow, Group, Post
+from .utils import pagination
 
 User = get_user_model()
 
@@ -12,6 +12,7 @@ POSTS_PER_PAGE = 10
 
 
 def index(request):
+    """Главная страница."""
     posts = Post.objects.select_related('author', 'group')
     page_obj = pagination(request, posts, POSTS_PER_PAGE)
     context = {
@@ -21,6 +22,7 @@ def index(request):
 
 
 def group_posts(request, slug):
+    """Страница группы."""
     group = get_object_or_404(Group, slug=slug)
     posts = group.group_posts.select_related('group')
     page_obj = pagination(request, posts, POSTS_PER_PAGE)
@@ -32,17 +34,18 @@ def group_posts(request, slug):
 
 
 def profile(request, username):
+    """Страница пользователя."""
     author = get_object_or_404(User, username=username)
     posts = author.user_posts.select_related('author')
     page_obj = pagination(request, posts, POSTS_PER_PAGE)
     user = request.user
     following = (
-        request.user != author
-        and user.is_authenticated
-        and Follow.objects.filter(
-            user=request.user,
-            author=author,
-        ).exists()
+            request.user != author
+            and user.is_authenticated
+            and Follow.objects.filter(
+        user=request.user,
+        author=author,
+    ).exists()
     )
     context = {
         'author': author,
@@ -53,6 +56,7 @@ def profile(request, username):
 
 
 def post_detail(request, post_id):
+    """Страница поста."""
     post = get_object_or_404(Post, pk=post_id)
     form = CommentForm(
         request.POST or None,
@@ -69,6 +73,7 @@ def post_detail(request, post_id):
 
 @login_required
 def post_create(request):
+    """Страница создания поста."""
     form = PostForm(
         request.POST or None,
         files=request.FILES or None,
@@ -83,6 +88,7 @@ def post_create(request):
 
 @login_required
 def post_edit(request, post_id):
+    """Страница редактирования поста."""
     post = get_object_or_404(Post, pk=post_id)
     form = PostForm(
         request.POST or None,
@@ -104,18 +110,20 @@ def post_edit(request, post_id):
 
 @login_required
 def add_comment(request, post_id):
+    """Добавление комментария к посту."""
     post = get_object_or_404(Post, pk=post_id)
     form = CommentForm(request.POST or None)
-    if form.is_valid():
-        comment = form.save(commit=False)
-        comment.author = request.user
-        comment.post = post
-        comment.save()
-    return redirect('posts:posts_detail', post_id=post_id)
+    if not form.is_valid():
+        return redirect('posts:posts_detail', post_id)
+    comment = form.save(commit=False)
+    comment.author = request.user
+    comment.post = post
+    comment.save()
 
 
 @login_required
 def follow_index(request):
+    """Страница подписок."""
     posts = Post.objects.filter(author__following__user=request.user)
     page_obj = pagination(request, posts, POSTS_PER_PAGE)
     context = {
@@ -126,10 +134,11 @@ def follow_index(request):
 
 @login_required
 def profile_follow(request, username):
+    """Подписка на автора."""
     user = get_object_or_404(User, username=username)
     if not Follow.objects.filter(
             user=request.user,
-            author=user
+            author=user,
     ).exists() and (request.user != user):
         Follow.objects.create(user=request.user, author=user)
     return redirect('posts:profile', username=username)
@@ -137,6 +146,7 @@ def profile_follow(request, username):
 
 @login_required
 def profile_unfollow(request, username):
+    """Отписка от автора."""
     get_object_or_404(
         Follow,
         author__username=username,

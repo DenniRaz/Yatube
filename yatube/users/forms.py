@@ -5,6 +5,7 @@ User = get_user_model()
 
 
 class CreationForm(UserCreationForm):
+    """Форма создания Users."""
     class Meta:
         model = User
         fields = ('first_name', 'last_name', 'username', 'email')

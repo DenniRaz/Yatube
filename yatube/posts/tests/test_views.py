@@ -8,7 +8,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
-from posts.models import Follow, Group, Post, User
+from ..models import Follow, Group, Post, User
 
 POSTS_ON_PAGE_NUMB = 10
 

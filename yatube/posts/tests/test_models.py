@@ -1,6 +1,6 @@
 from django.test import TestCase
 
-from posts.models import (
+from ..models import (
     COMMENT_STR,
     Comment,
     FOLLOW_STR,

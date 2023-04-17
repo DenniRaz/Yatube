@@ -1,7 +1,7 @@
 from django.test import TestCase
 from django.urls import reverse
 
-from posts.urls import app_name
+from ..urls import app_name
 
 
 USERNAME = 'NoName'
@@ -17,7 +17,7 @@ ROUTES = [
     (f'/posts/{POST_ID}/edit/', 'posts_edit', [POST_ID]),
     (f'/posts/{POST_ID}/comment/', 'add_comment', [POST_ID]),
     (f'/profile/{USERNAME}/follow/', 'profile_follow', [USERNAME]),
-    (f'/profile/{USERNAME}/unfollow/', 'profile_unfollow', [USERNAME])
+    (f'/profile/{USERNAME}/unfollow/', 'profile_unfollow', [USERNAME]),
 ]
 
 

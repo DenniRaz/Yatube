@@ -1,16 +1,11 @@
 from django.contrib import admin
 
-from posts.models import Comment, Follow, Group, Post
+from .models import Comment, Follow, Group, Post
 
 
 class PostAdmin(admin.ModelAdmin):
-    list_display = (
-        'pk',
-        'text',
-        'pub_date',
-        'author',
-        'group',
-    )
+    """Поля модели Post доступные в admin"""
+    list_display = ('pk', 'text', 'pub_date', 'author', 'group',)
     list_editable = ('group',)
     search_fields = ('text',)
     list_filter = ('pub_date',)
@@ -18,31 +13,20 @@ class PostAdmin(admin.ModelAdmin):
 
 
 class GroupAdmin(admin.ModelAdmin):
-    list_display = (
-        'pk',
-        'slug',
-        'title',
-        'description',
-    )
-    search_fields = ('title', 'description',)
+    """Поля модели Group доступные в admin"""
+    list_display = ('pk', 'slug', 'title', 'description')
+    search_fields = ('title', 'description')
     empty_value_display = '-пусто-'
 
 
 class CommentAdmin(admin.ModelAdmin):
-    list_display = (
-        'pk',
-        'post',
-        'author',
-        'text',
-        'created'
-    )
+    """Поля модели Comment доступные в admin"""
+    list_display = ('pk', 'post', 'author', 'text', 'created')
 
 
 class FollowAdmin(admin.ModelAdmin):
-    list_display = (
-        'user',
-        'author'
-    )
+    """Поля модели Follow доступные в admin"""
+    list_display = ('user', 'author')
 
 
 admin.site.register(Post, PostAdmin)
