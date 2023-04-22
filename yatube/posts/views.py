@@ -113,12 +113,12 @@ def add_comment(request, post_id):
     """Добавление комментария к посту."""
     post = get_object_or_404(Post, pk=post_id)
     form = CommentForm(request.POST or None)
-    if not form.is_valid():
-        return redirect('posts:posts_detail', post_id)
-    comment = form.save(commit=False)
-    comment.author = request.user
-    comment.post = post
-    comment.save()
+    if form.is_valid():
+        comment = form.save(commit=False)
+        comment.author = request.user
+        comment.post = post
+        comment.save()
+    return redirect('posts:posts_detail', post_id)
 
 
 @login_required
